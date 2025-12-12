@@ -1,0 +1,50 @@
+CREATE DATABASE IF NOT EXISTS aidetect DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+USE aidetect;
+
+-- 1. 大模型 API 表
+CREATE TABLE IF NOT EXISTS ai_model_api (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL COMMENT '名称，如 OpenAI、DeepSeek、本地模型',
+    base_url VARCHAR(300) NOT NULL COMMENT '大模型 API 基础地址',
+    api_key VARCHAR(200) NOT NULL COMMENT 'API Key 或 Token',
+    model_name VARCHAR(100) NOT NULL COMMENT '默认模型名称',
+    enabled TINYINT DEFAULT 1 COMMENT '是否启用',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='大模型API配置表';
+
+-- 2. 识别规则表
+CREATE TABLE IF NOT EXISTS ai_rule (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    model_api_id BIGINT NOT NULL COMMENT '绑定的大模型 API ID',
+    name VARCHAR(100) NOT NULL COMMENT '规则名称',
+    description VARCHAR(255) COMMENT '规则描述',
+    prompt_template TEXT NOT NULL COMMENT '提示词模板',
+    enabled TINYINT DEFAULT 1 COMMENT '是否启用',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (model_api_id) REFERENCES ai_model_api(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI识别规则表';
+
+-- 3. 视频流表
+CREATE TABLE IF NOT EXISTS video_stream (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL COMMENT '视频流名称',
+    stream_url VARCHAR(500) NOT NULL COMMENT '视频流URL',
+    enabled TINYINT DEFAULT 1 COMMENT '是否启用',
+    interval_seconds INT DEFAULT 5 COMMENT '每多少秒识别一次',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='视频流配置表';
+
+-- 4. 视频流绑定规则表
+CREATE TABLE IF NOT EXISTS video_stream_rule (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    video_stream_id BIGINT NOT NULL,
+    ai_rule_id BIGINT NOT NULL,
+    enabled TINYINT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (video_stream_id) REFERENCES video_stream(id),
+    FOREIGN KEY (ai_rule_id) REFERENCES ai_rule(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='视频流规则绑定表';
