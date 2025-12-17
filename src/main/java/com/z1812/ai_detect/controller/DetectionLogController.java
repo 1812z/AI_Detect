@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
+// 视频流规则日志控制器
+
 @RestController
 @RequestMapping("/api/logs")
 @RequiredArgsConstructor

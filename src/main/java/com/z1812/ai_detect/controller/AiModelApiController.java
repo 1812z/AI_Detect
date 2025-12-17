@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// AI模型接口管理控制器
+
 @RestController
 @RequestMapping("/api/model")
 @RequiredArgsConstructor

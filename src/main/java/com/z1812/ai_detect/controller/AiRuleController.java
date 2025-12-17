@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// AI规则管理控制器
+
 @RestController
 @RequestMapping("/api/rule")
 @RequiredArgsConstructor

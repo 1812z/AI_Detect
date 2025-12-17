@@ -19,6 +19,7 @@ public class AiDetectionService {
 
     public String detectByRule(String streamUrl, AiRule rule) {
         try {
+            // 获取视频流画面
             byte[] imageBytes = videoCapture.captureFrame(streamUrl);
 
             AiModelApi modelApi = modelApiService.getById(rule.getModelApiId());
@@ -28,6 +29,7 @@ public class AiDetectionService {
 
             String prompt = rule.getPromptTemplate();
 
+            // 检测画面并返回结果
             String result = openAIClient.analyzeImage(
                     modelApi.getBaseUrl(),
                     modelApi.getApiKey(),

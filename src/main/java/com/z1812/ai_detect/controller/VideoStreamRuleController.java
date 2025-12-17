@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// 视频流规则管理控制器
+
 @RestController
 @RequestMapping("/api/stream-rule")
 @RequiredArgsConstructor

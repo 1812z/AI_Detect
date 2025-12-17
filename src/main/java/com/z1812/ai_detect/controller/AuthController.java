@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
+// 登录登出控制器
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor

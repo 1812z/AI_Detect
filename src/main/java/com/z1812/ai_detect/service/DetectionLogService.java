@@ -1,7 +1,9 @@
 package com.z1812.ai_detect.service;
 
 import com.mybatisflex.core.query.QueryWrapper;
+import com.z1812.ai_detect.entity.AiRule;
 import com.z1812.ai_detect.entity.DetectionLog;
+import com.z1812.ai_detect.entity.VideoStream;
 import com.z1812.ai_detect.mapper.DetectionLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.z1812.ai_detect.entity.table.DetectionLogTableDef.DETECTION_LOG;
 
@@ -18,6 +21,8 @@ import static com.z1812.ai_detect.entity.table.DetectionLogTableDef.DETECTION_LO
 public class DetectionLogService {
 
     private final DetectionLogMapper detectionLogMapper;
+    private final VideoStreamService videoStreamService;
+    private final AiRuleService aiRuleService;
 
     /**
      * 添加检测日志
@@ -41,9 +46,9 @@ public class DetectionLogService {
     }
 
     /**
-     * 根据规则ID获取日志
+     * 根据规则ID获取日志（返回DTO）
      */
-    public List<DetectionLog> getLogsByRuleId(Long ruleId, Integer limit) {
+    public List<com.z1812.ai_detect.dto.DetectionLog> getLogsByRuleId(Long ruleId, Integer limit) {
         QueryWrapper wrapper = QueryWrapper.create()
                 .where(DETECTION_LOG.AI_RULE_ID.eq(ruleId))
                 .orderBy(DETECTION_LOG.CREATED_AT.desc());
@@ -52,7 +57,10 @@ public class DetectionLogService {
             wrapper.limit(limit);
         }
 
-        return detectionLogMapper.selectListByQuery(wrapper);
+        List<DetectionLog> entities = detectionLogMapper.selectListByQuery(wrapper);
+        return entities.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -80,5 +88,26 @@ public class DetectionLogService {
         }
 
         return detectionLogMapper.selectListByQuery(wrapper);
+    }
+
+    /**
+     * 将 Entity 转换为 DTO
+     */
+    private com.z1812.ai_detect.dto.DetectionLog convertToDto(DetectionLog entity) {
+        VideoStream stream = videoStreamService.getById(entity.getVideoStreamId());
+        AiRule rule = aiRuleService.getById(entity.getAiRuleId());
+
+        return com.z1812.ai_detect.dto.DetectionLog.builder()
+                .id(entity.getId())
+                .videoStreamId(entity.getVideoStreamId())
+                .videoStreamName(stream != null ? stream.getName() : "Unknown")
+                .ruleId(entity.getAiRuleId())
+                .ruleName(rule != null ? rule.getName() : "Unknown")
+                .status(entity.getStatus())
+                .result(entity.getAiResult())
+                .errorMessage(entity.getErrorMessage())
+                .createTime(entity.getCreatedAt())
+                .duration(entity.getExecutionTime() != null ? entity.getExecutionTime().longValue() : 0L)
+                .build();
     }
 }
