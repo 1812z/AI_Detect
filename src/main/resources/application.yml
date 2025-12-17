@@ -10,7 +10,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://192.168.43.205:3306/aidetect?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
-    password: password
+    password: passward
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -18,7 +18,7 @@ spring:
 
 mybatis-flex:
   mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.z1812.aidetect.entity
+  type-aliases-package: com.z1812.ai_detect.entity
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
@@ -28,7 +28,7 @@ server:
 
 logging:
   level:
-    com.z1812.aidetect: debug
+    com.z1812.ai_detect: debug
     com.mybatisflex: debug
 
 # 认证配置

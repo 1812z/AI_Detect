@@ -411,7 +411,7 @@
 
 ---
 
-## 5. 检测日志查询（内存存储）
+## 5. 检测日志查询（数据库存储）
 
 ### 5.1 查询指定规则的历史执行记录
 
@@ -462,14 +462,199 @@
 **使用说明**:
 - 返回的数组按时间倒序排列，最新的记录在索引 0 位置
 - 可以直接通过 `data[0]` 获取最新的执行结果
-- 日志保存在内存中，重启应用后会清空
-- 每个规则最多保留 100 条日志
+- 日志保存在数据库中，永久保存
+- 支持通过统计接口进行数据分析
 
 ---
 
-## 6. 测试接口
+## 6. 统计接口
 
-### 6.1 测试视频流捕获（通过 ID）
+### 6.1 获取统计摘要（饼图数据）
+
+**接口**: `GET /api/statistics/summary`
+
+**查询参数**:
+- `timeRange`: 时间范围，可选值 `24h`（24小时）或 `7d`（7天），默认 `24h`
+- `successType`: 成功类型，可选值 `execution`（执行成功）或 `ai_result`（AI识别成功），默认 `execution`
+- `videoStreamId`: 视频流ID，可选，不传则统计所有视频流
+- `ruleId`: 规则ID，可选，不传则统计所有规则
+
+**请求示例**:
+```bash
+# 查询最近24小时的执行统计
+GET /api/statistics/summary?timeRange=24h&successType=execution
+
+# 查询最近7天的AI识别统计（特定视频流）
+GET /api/statistics/summary?timeRange=7d&successType=ai_result&videoStreamId=1
+
+# 查询特定规则的统计
+GET /api/statistics/summary?timeRange=24h&ruleId=1
+```
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "totalCount": 288,
+    "successCount": 245,
+    "failureCount": 43,
+    "successRate": 85.07
+  }
+}
+```
+
+**字段说明**:
+- `totalCount`: 总执行次数
+- `successCount`: 成功次数
+- `failureCount`: 失败次数
+- `successRate`: 成功率（百分比，保留两位小数）
+
+**成功类型说明**:
+- `execution`: 根据任务执行状态判断，status 为 `SUCCESS` 表示成功
+- `ai_result`: 根据 AI 返回 JSON 中的 `success` 字段判断，值为 `true` 或 `1` 表示成功
+
+**使用场景**:
+- 前端饼图展示
+- 系统运行状态监控
+- 性能指标统计
+
+---
+
+### 6.2 获取趋势数据（折线图数据）
+
+**接口**: `GET /api/statistics/trend`
+
+**查询参数**: 同 6.1
+
+**请求示例**:
+```bash
+# 查询最近24小时的趋势（24个数据点）
+GET /api/statistics/trend?timeRange=24h&successType=execution
+
+# 查询最近7天的趋势（7个数据点）
+GET /api/statistics/trend?timeRange=7d&successType=ai_result
+```
+
+**返回示例（24小时）**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "labels": [
+      "00:00", "01:00", "02:00", "03:00", "04:00", "05:00",
+      "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
+      "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+      "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"
+    ],
+    "totalCounts": [8, 5, 3, 2, 4, 6, 10, 15, 18, 20, 22, 25, 28, 30, 32, 28, 25, 22, 20, 18, 15, 12, 10, 9],
+    "successCounts": [7, 4, 3, 2, 3, 5, 9, 13, 16, 18, 20, 22, 25, 27, 29, 25, 22, 20, 18, 16, 13, 10, 9, 8],
+    "failureCounts": [1, 1, 0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 1, 1]
+  }
+}
+```
+
+**返回示例（7天）**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "labels": ["12-11", "12-12", "12-13", "12-14", "12-15", "12-16", "12-17"],
+    "totalCounts": [320, 335, 298, 342, 356, 333, 288],
+    "successCounts": [280, 300, 265, 310, 320, 300, 245],
+    "failureCounts": [40, 35, 33, 32, 36, 33, 43]
+  }
+}
+```
+
+**字段说明**:
+- `labels`: 时间标签数组
+  - 24小时模式：24个元素，格式为 `HH:00`（如：`00:00`, `01:00`）
+  - 7天模式：7个元素，格式为 `MM-dd`（如：`12-11`, `12-12`）
+- `totalCounts`: 对应时间点的总执行次数数组
+- `successCounts`: 对应时间点的成功次数数组
+- `failureCounts`: 对应时间点的失败次数数组
+
+**使用场景**:
+- 前端折线图展示
+- 趋势分析
+- 系统负载监控
+
+---
+
+### 6.3 统计接口使用示例
+
+**场景1：监控系统整体运行状况**
+```bash
+# 获取最近24小时的整体统计
+curl "http://localhost:8080/api/statistics/summary?timeRange=24h&successType=execution"
+
+# 获取最近24小时的趋势
+curl "http://localhost:8080/api/statistics/trend?timeRange=24h&successType=execution"
+```
+
+**场景2：分析特定视频流的识别效果**
+```bash
+# 统计视频流ID为1的最近7天AI识别成功率
+curl "http://localhost:8080/api/statistics/summary?timeRange=7d&successType=ai_result&videoStreamId=1"
+```
+
+**场景3：评估某个规则的表现**
+```bash
+# 统计规则ID为2的最近24小时表现
+curl "http://localhost:8080/api/statistics/summary?timeRange=24h&ruleId=2"
+curl "http://localhost:8080/api/statistics/trend?timeRange=24h&ruleId=2"
+```
+
+**前端集成示例（Vue + ECharts）**:
+```javascript
+// 获取饼图数据
+async function loadPieChart() {
+  const response = await fetch('/api/statistics/summary?timeRange=24h&successType=execution');
+  const result = await response.json();
+  const { successCount, failureCount } = result.data;
+
+  // ECharts 配置
+  const option = {
+    series: [{
+      type: 'pie',
+      data: [
+        { value: successCount, name: '成功' },
+        { value: failureCount, name: '失败' }
+      ]
+    }]
+  };
+  chart.setOption(option);
+}
+
+// 获取折线图数据
+async function loadLineChart() {
+  const response = await fetch('/api/statistics/trend?timeRange=24h&successType=execution');
+  const result = await response.json();
+  const { labels, totalCounts, successCounts, failureCounts } = result.data;
+
+  // ECharts 配置
+  const option = {
+    xAxis: { type: 'category', data: labels },
+    yAxis: { type: 'value' },
+    series: [
+      { name: '总数', type: 'line', data: totalCounts },
+      { name: '成功', type: 'line', data: successCounts },
+      { name: '失败', type: 'line', data: failureCounts }
+    ]
+  };
+  chart.setOption(option);
+}
+```
+
+---
+
+## 7. 测试接口
+
+### 7.1 测试视频流捕获（通过 ID）
 
 **接口**: `GET /api/test/capture/{streamId}`
 
@@ -491,7 +676,7 @@
 }
 ```
 
-### 6.2 测试视频流捕获（通过 URL）
+### 7.2 测试视频流捕获（通过 URL）
 
 **接口**: `POST /api/test/capture-url`
 
@@ -504,15 +689,15 @@
 }
 ```
 
-**返回示例**: 同 6.1
+**返回示例**: 同 7.1
 
 **说明**: 此接口用于测试视频流是否可以正常捕获图像，返回 Base64 编码的图片数据
 
 ---
 
-## 7. 使用流程
+## 8. 使用流程
 
-### 7.1 完整配置流程
+### 8.1 完整配置流程
 
 1. **创建大模型 API 配置**
    ```
@@ -536,21 +721,23 @@
 
 5. **系统自动开始识别**
    - 系统会根据视频流的 `intervalSeconds` 定期执行识别
-   - 识别结果会自动记录到内存日志中
+   - 识别结果会自动保存到数据库
 
-6. **查询识别日志**
+6. **查询识别日志和统计**
    ```
    GET /api/logs/{ruleId}
+   GET /api/statistics/summary
+   GET /api/statistics/trend
    ```
 
-### 7.2 提示词编写建议
+### 8.2 提示词编写建议
 
 **用户提示词（promptTemplate）**:
 ```
 请分析这张图片，检测是否有老人摔倒。返回 JSON 格式: {"has_fall": true/false, "confidence": 0-100, "description": "具体描述"}
 ```
 
-### 7.3 常见识别规则示例
+### 8.3 常见识别规则示例
 
 **老人摔倒检测**:
 ```json
@@ -582,9 +769,9 @@
 
 ---
 
-## 8. 错误处理
+## 9. 错误处理
 
-### 8.1 错误响应格式
+### 9.1 错误响应格式
 
 ```json
 {
@@ -594,7 +781,7 @@
 }
 ```
 
-### 8.2 常见错误
+### 9.2 常见错误
 
 - **数据库连接失败**: 检查 application.yml 中的数据库配置
 - **视频流无法访问**: 检查视频流 URL 是否正确，网络是否可达
@@ -603,7 +790,7 @@
 
 ---
 
-## 9. 注意事项
+## 10. 注意事项
 
 1. **视频流 URL 格式**:
    - RTSP 流: `rtsp://192.168.1.100:554/stream1`
@@ -622,18 +809,19 @@
    - DeepSeek: 成本低，中文支持好
 
 4. **日志管理**:
-   - 定期清理日志，避免内存占用过高
-   - 重要日志建议导出保存
+   - 日志永久保存在数据库中
    - 可通过统计接口监控系统运行状态
+   - 建议定期备份数据库
 
 5. **系统提示词优化**:
    - 明确告知输出格式（JSON）
    - 强调关注重点（人物、行为、场景等）
    - 避免多余解释，只返回结果
+   - 如需统计成功率，建议在返回 JSON 中包含 `success` 字段
 
 ---
 
-## 10. 完整示例
+## 11. 完整示例
 
 ### 示例：配置一个老人摔倒检测系统
 
@@ -697,9 +885,9 @@ curl http://localhost:8080/api/logs/1?limit=1
 
 ---
 
-## 11. 数据库表结构
+## 12. 数据库表结构
 
-### 11.1 ai_model_api (大模型配置表)
+### 12.1 ai_model_api (大模型配置表)
 ```sql
 CREATE TABLE ai_model_api (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -713,7 +901,7 @@ CREATE TABLE ai_model_api (
 );
 ```
 
-### 11.2 ai_rule (识别规则表)
+### 12.2 ai_rule (识别规则表)
 ```sql
 CREATE TABLE ai_rule (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -728,7 +916,7 @@ CREATE TABLE ai_rule (
 );
 ```
 
-### 11.3 video_stream (视频流表)
+### 12.3 video_stream (视频流表)
 ```sql
 CREATE TABLE video_stream (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -741,7 +929,7 @@ CREATE TABLE video_stream (
 );
 ```
 
-### 11.4 video_stream_rule (视频流规则绑定表)
+### 12.4 video_stream_rule (视频流规则绑定表)
 ```sql
 CREATE TABLE video_stream_rule (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -754,7 +942,44 @@ CREATE TABLE video_stream_rule (
 );
 ```
 
+### 12.5 detection_log (检测日志表)
+```sql
+CREATE TABLE detection_log (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    video_stream_id BIGINT NOT NULL COMMENT '视频流ID',
+    ai_rule_id BIGINT NOT NULL COMMENT '识别规则ID',
+    video_stream_rule_id BIGINT COMMENT '视频流规则绑定ID',
+    status VARCHAR(20) NOT NULL COMMENT '执行状态: SUCCESS/FAILURE',
+    ai_result TEXT COMMENT 'AI返回的完整JSON结果',
+    ai_success TINYINT COMMENT 'AI识别结果中的success字段',
+    error_message TEXT COMMENT '错误信息（如果失败）',
+    execution_time INT COMMENT '执行耗时（毫秒）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '执行时间',
+    FOREIGN KEY (video_stream_id) REFERENCES video_stream(id),
+    FOREIGN KEY (ai_rule_id) REFERENCES ai_rule(id),
+    FOREIGN KEY (video_stream_rule_id) REFERENCES video_stream_rule(id),
+    INDEX idx_created_at (created_at),
+    INDEX idx_video_stream_id (video_stream_id),
+    INDEX idx_status (status)
+);
+```
+
+**字段说明**:
+- `video_stream_id`: 关联的视频流ID
+- `ai_rule_id`: 关联的识别规则ID
+- `video_stream_rule_id`: 关联的绑定关系ID
+- `status`: 执行状态，`SUCCESS` 表示执行成功，`FAILURE` 表示执行失败
+- `ai_result`: AI 返回的完整 JSON 结果字符串
+- `ai_success`: 从 AI 结果中提取的 success 字段（1表示成功，0表示失败，null表示未提取）
+- `error_message`: 错误信息（执行失败时记录）
+- `execution_time`: 执行耗时（毫秒）
+- `created_at`: 执行时间，用于统计和查询
+
 ---
 
-**文档版本**: 1.0
-**最后更新**: 2025-12-11
+**文档版本**: 2.0
+**最后更新**: 2025-12-17
+**更新内容**:
+- 添加统计接口（饼图和折线图）
+- 检测日志改为数据库存储
+- 新增 detection_log 表
