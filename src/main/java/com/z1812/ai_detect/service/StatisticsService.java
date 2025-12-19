@@ -24,9 +24,7 @@ public class StatisticsService {
 
     private final DetectionLogMapper detectionLogMapper;
 
-    /**
-     * 获取统计摘要（饼图数据）
-     */
+    // 获取统计摘要
     public StatisticsSummaryResponse getSummary(StatisticsRequest request) {
         LocalDateTime startTime = getStartTime(request.getTimeRange());
         LocalDateTime endTime = LocalDateTime.now();
@@ -46,9 +44,8 @@ public class StatisticsService {
                 .build();
     }
 
-    /**
-     * 获取趋势数据（折线图数据）
-     */
+
+    // 获取趋势数据
     public TrendDataResponse getTrendData(StatisticsRequest request) {
         String timeRange = request.getTimeRange();
         boolean is24Hours = "24h".equalsIgnoreCase(timeRange);
@@ -108,9 +105,7 @@ public class StatisticsService {
                 .build();
     }
 
-    /**
-     * 查询日志
-     */
+    // 查询日志
     private List<DetectionLog> queryLogs(LocalDateTime startTime, LocalDateTime endTime,
                                          Long videoStreamId, Long ruleId) {
         QueryWrapper wrapper = QueryWrapper.create()
@@ -128,9 +123,7 @@ public class StatisticsService {
         return detectionLogMapper.selectListByQuery(wrapper);
     }
 
-    /**
-     * 统计成功次数
-     */
+    // 统计成功次数
     private long countSuccess(List<DetectionLog> logs, String successType) {
         if ("ai_result".equalsIgnoreCase(successType)) {
             // 根据 AI 识别结果中的 success 字段判断
@@ -145,9 +138,7 @@ public class StatisticsService {
         }
     }
 
-    /**
-     * 获取开始时间
-     */
+    // 获取开始时间
     private LocalDateTime getStartTime(String timeRange) {
         if ("7d".equalsIgnoreCase(timeRange)) {
             return LocalDateTime.now().minusDays(7);

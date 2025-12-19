@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 
 import static com.z1812.ai_detect.entity.table.DetectionLogTableDef.DETECTION_LOG;
 
+// 检测结果管理服务
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
