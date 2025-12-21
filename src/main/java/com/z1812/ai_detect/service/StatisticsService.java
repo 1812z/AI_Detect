@@ -17,133 +17,125 @@ import java.util.List;
 
 import static com.z1812.ai_detect.entity.table.DetectionLogTableDef.DETECTION_LOG;
 
+/**
+ * 统计服务
+ * 用来统计检测日志的成功率和趋势
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StatisticsService {
 
-    private final DetectionLogMapper detectionLogMapper;
+    private final DetectionLogMapper logMapper;
 
-    // 获取统计摘要
-    public StatisticsSummaryResponse getSummary(StatisticsRequest request) {
-        LocalDateTime startTime = getStartTime(request.getTimeRange());
-        LocalDateTime endTime = LocalDateTime.now();
+    // 获取摘要数据（总数、成功数、失败数、成功率）
+    public StatisticsSummaryResponse getSummary(StatisticsRequest req) {
+        LocalDateTime start = calcStartTime(req.getTimeRange());
+        LocalDateTime end = LocalDateTime.now();
 
-        List<DetectionLog> logs = queryLogs(startTime, endTime, request.getVideoStreamId(), request.getRuleId());
+        // 查询这段时间的所有日志
+        List<DetectionLog> logs = getLogs(start, end, req.getVideoStreamId(), req.getRuleId());
 
-        long totalCount = logs.size();
-        long successCount = countSuccess(logs, request.getSuccessType());
-        long failureCount = totalCount - successCount;
-        double successRate = totalCount > 0 ? (successCount * 100.0 / totalCount) : 0;
+        long total = logs.size();
+        long success = calcSuccessCount(logs, req.getSuccessType());
+        long fail = total - success;
+
+        // 算成功率，保留两位小数
+        double rate = total > 0 ? (success * 100.0 / total) : 0;
+        rate = Math.round(rate * 100.0) / 100.0;
 
         return StatisticsSummaryResponse.builder()
-                .totalCount(totalCount)
-                .successCount(successCount)
-                .failureCount(failureCount)
-                .successRate(Math.round(successRate * 100.0) / 100.0)
+                .totalCount(total)
+                .successCount(success)
+                .failureCount(fail)
+                .successRate(rate)
                 .build();
     }
 
+    // 获取趋势数据（折线图用）
+    public TrendDataResponse getTrendData(StatisticsRequest req) {
+        String range = req.getTimeRange();
+        boolean is24h = "24h".equalsIgnoreCase(range);
 
-    // 获取趋势数据
-    public TrendDataResponse getTrendData(StatisticsRequest request) {
-        String timeRange = request.getTimeRange();
-        boolean is24Hours = "24h".equalsIgnoreCase(timeRange);
-        int points = is24Hours ? 24 : 7;
-
-        LocalDateTime endTime = LocalDateTime.now();
-        LocalDateTime startTime = getStartTime(timeRange);
+        LocalDateTime now = LocalDateTime.now();
+        int pointCount = is24h ? 24 : 7;  // 24小时或7天
 
         List<String> labels = new ArrayList<>();
-        List<Long> totalCounts = new ArrayList<>();
-        List<Long> successCounts = new ArrayList<>();
-        List<Long> failureCounts = new ArrayList<>();
+        List<Long> totals = new ArrayList<>();
+        List<Long> successes = new ArrayList<>();
+        List<Long> fails = new ArrayList<>();
 
-        if (is24Hours) {
-            // 24小时：每个点代表1小时
-            for (int i = 0; i < points; i++) {
-                LocalDateTime pointEnd = endTime.minusHours(points - 1 - i);
-                LocalDateTime pointStart = pointEnd.minusHours(1);
+        // 按小时或天分段统计
+        for (int i = 0; i < pointCount; i++) {
+            LocalDateTime pEnd, pStart;
 
-                labels.add(pointEnd.format(DateTimeFormatter.ofPattern("HH:00")));
-
-                List<DetectionLog> logs = queryLogs(pointStart, pointEnd, request.getVideoStreamId(), request.getRuleId());
-
-                long total = logs.size();
-                long success = countSuccess(logs, request.getSuccessType());
-                long failure = total - success;
-
-                totalCounts.add(total);
-                successCounts.add(success);
-                failureCounts.add(failure);
+            if (is24h) {
+                // 24小时模式：每个点是1小时
+                pEnd = now.minusHours(pointCount - 1 - i);
+                pStart = pEnd.minusHours(1);
+                labels.add(pEnd.format(DateTimeFormatter.ofPattern("HH:00")));
+            } else {
+                // 7天模式：每个点是1天
+                pEnd = now.minusDays(pointCount - 1 - i).withHour(23).withMinute(59).withSecond(59);
+                pStart = pEnd.withHour(0).withMinute(0).withSecond(0);
+                labels.add(pEnd.format(DateTimeFormatter.ofPattern("MM-dd")));
             }
-        } else {
-            // 7天：每个点代表1天
-            for (int i = 0; i < points; i++) {
-                LocalDateTime pointEnd = endTime.minusDays(points - 1 - i).withHour(23).withMinute(59).withSecond(59);
-                LocalDateTime pointStart = pointEnd.withHour(0).withMinute(0).withSecond(0);
 
-                labels.add(pointEnd.format(DateTimeFormatter.ofPattern("MM-dd")));
+            List<DetectionLog> logs = getLogs(pStart, pEnd, req.getVideoStreamId(), req.getRuleId());
 
-                List<DetectionLog> logs = queryLogs(pointStart, pointEnd, request.getVideoStreamId(), request.getRuleId());
+            long t = logs.size();
+            long s = calcSuccessCount(logs, req.getSuccessType());
 
-                long total = logs.size();
-                long success = countSuccess(logs, request.getSuccessType());
-                long failure = total - success;
-
-                totalCounts.add(total);
-                successCounts.add(success);
-                failureCounts.add(failure);
-            }
+            totals.add(t);
+            successes.add(s);
+            fails.add(t - s);
         }
 
         return TrendDataResponse.builder()
                 .labels(labels)
-                .totalCounts(totalCounts)
-                .successCounts(successCounts)
-                .failureCounts(failureCounts)
+                .totalCounts(totals)
+                .successCounts(successes)
+                .failureCounts(fails)
                 .build();
     }
 
-    // 查询日志
-    private List<DetectionLog> queryLogs(LocalDateTime startTime, LocalDateTime endTime,
-                                         Long videoStreamId, Long ruleId) {
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(DETECTION_LOG.CREATED_AT.ge(startTime))
-                .and(DETECTION_LOG.CREATED_AT.le(endTime));
+    // 从数据库查询日志
+    private List<DetectionLog> getLogs(LocalDateTime start, LocalDateTime end,
+                                       Long streamId, Long ruleId) {
+        QueryWrapper qw = QueryWrapper.create()
+                .where(DETECTION_LOG.CREATED_AT.ge(start))
+                .and(DETECTION_LOG.CREATED_AT.le(end));
 
-        if (videoStreamId != null) {
-            wrapper.and(DETECTION_LOG.VIDEO_STREAM_ID.eq(videoStreamId));
+        if (streamId != null) {
+            qw.and(DETECTION_LOG.VIDEO_STREAM_ID.eq(streamId));
         }
-
         if (ruleId != null) {
-            wrapper.and(DETECTION_LOG.AI_RULE_ID.eq(ruleId));
+            qw.and(DETECTION_LOG.AI_RULE_ID.eq(ruleId));
         }
 
-        return detectionLogMapper.selectListByQuery(wrapper);
+        return logMapper.selectListByQuery(qw);
     }
 
-    // 统计成功次数
-    private long countSuccess(List<DetectionLog> logs, String successType) {
-        if ("ai_result".equalsIgnoreCase(successType)) {
-            // 根据 AI 识别结果中的 success 字段判断
+    // 计算成功的数量
+    private long calcSuccessCount(List<DetectionLog> logs, String type) {
+        if ("ai_result".equalsIgnoreCase(type)) {
+            // 看AI返回的success字段
             return logs.stream()
                     .filter(log -> log.getAiSuccess() != null && log.getAiSuccess() == 1)
                     .count();
         } else {
-            // 根据执行状态判断
+            // 看执行状态
             return logs.stream()
                     .filter(log -> "SUCCESS".equals(log.getStatus()))
                     .count();
         }
     }
 
-    // 获取开始时间
-    private LocalDateTime getStartTime(String timeRange) {
-        if ("7d".equalsIgnoreCase(timeRange)) {
+    // 根据时间范围算起始时间
+    private LocalDateTime calcStartTime(String range) {
+        if ("7d".equalsIgnoreCase(range)) {
             return LocalDateTime.now().minusDays(7);
-        } else {
-            return LocalDateTime.now().minusHours(24);
         }
+        return LocalDateTime.now().minusHours(24);
     }
 }

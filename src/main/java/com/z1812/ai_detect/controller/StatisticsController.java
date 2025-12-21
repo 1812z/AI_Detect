@@ -9,8 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-// 统计接口控制器
-
+/**
+ * 统计功能控制器
+ * 提供饼图和折线图的数据接口
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/statistics")
@@ -19,15 +21,7 @@ public class StatisticsController {
 
     private final StatisticsService statisticsService;
 
-    /**
-     * 获取统计摘要（饼图数据）
-     *
-     * @param timeRange    时间范围：24h 或 7d，默认 24h
-     * @param successType  成功类型：execution 或 ai_result，默认 execution
-     * @param videoStreamId 视频流ID（可选）
-     * @param ruleId       规则ID（可选）
-     * @return 统计摘要
-     */
+    // 统计摘要，给前端饼图用
     @GetMapping("/summary")
     public Result<StatisticsSummaryResponse> getSummary(
             @RequestParam(defaultValue = "24h") String timeRange,
@@ -35,28 +29,17 @@ public class StatisticsController {
             @RequestParam(required = false) Long videoStreamId,
             @RequestParam(required = false) Long ruleId) {
 
-        StatisticsRequest request = new StatisticsRequest();
-        request.setTimeRange(timeRange);
-        request.setSuccessType(successType);
-        request.setVideoStreamId(videoStreamId);
-        request.setRuleId(ruleId);
+        StatisticsRequest req = new StatisticsRequest();
+        req.setTimeRange(timeRange);
+        req.setSuccessType(successType);
+        req.setVideoStreamId(videoStreamId);
+        req.setRuleId(ruleId);
 
-        log.info("获取统计摘要 - 时间范围: {}, 成功类型: {}, 视频流ID: {}, 规则ID: {}",
-                timeRange, successType, videoStreamId, ruleId);
-
-        StatisticsSummaryResponse summary = statisticsService.getSummary(request);
-        return Result.success(summary);
+        log.info("查询统计摘要: {}", timeRange);
+        return Result.success(statisticsService.getSummary(req));
     }
 
-    /**
-     * 获取趋势数据（折线图数据）
-     *
-     * @param timeRange    时间范围：24h 或 7d，默认 24h
-     * @param successType  成功类型：execution 或 ai_result，默认 execution
-     * @param videoStreamId 视频流ID（可选）
-     * @param ruleId       规则ID（可选）
-     * @return 趋势数据
-     */
+    // 趋势数据，给前端折线图用
     @GetMapping("/trend")
     public Result<TrendDataResponse> getTrendData(
             @RequestParam(defaultValue = "24h") String timeRange,
@@ -64,16 +47,13 @@ public class StatisticsController {
             @RequestParam(required = false) Long videoStreamId,
             @RequestParam(required = false) Long ruleId) {
 
-        StatisticsRequest request = new StatisticsRequest();
-        request.setTimeRange(timeRange);
-        request.setSuccessType(successType);
-        request.setVideoStreamId(videoStreamId);
-        request.setRuleId(ruleId);
+        StatisticsRequest req = new StatisticsRequest();
+        req.setTimeRange(timeRange);
+        req.setSuccessType(successType);
+        req.setVideoStreamId(videoStreamId);
+        req.setRuleId(ruleId);
 
-        log.info("获取趋势数据 - 时间范围: {}, 成功类型: {}, 视频流ID: {}, 规则ID: {}",
-                timeRange, successType, videoStreamId, ruleId);
-
-        TrendDataResponse trendData = statisticsService.getTrendData(request);
-        return Result.success(trendData);
+        log.info("查询趋势数据: {}", timeRange);
+        return Result.success(statisticsService.getTrendData(req));
     }
 }

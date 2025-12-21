@@ -7,22 +7,14 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-// 趋势数据响应
-
+// 趋势数据的返回结果（折线图数据）
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class TrendDataResponse {
-     // 时间标签列表
-    private List<String> labels;
-
-     // 总执行次数数据点
-    private List<Long> totalCounts;
-
-     // 成功次数数据点
-    private List<Long> successCounts;
-
-     // 失败次数数据点
-    private List<Long> failureCounts;
+    private List<String> labels;        // 时间标签(横坐标)
+    private List<Long> totalCounts;     // 总数数据点
+    private List<Long> successCounts;   // 成功数据点
+    private List<Long> failureCounts;   // 失败数据点
 }

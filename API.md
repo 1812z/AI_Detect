@@ -1,10 +1,44 @@
 # AI 识别系统 API 文档
 
+## API 概览
+| 模块 | 方法 | 路径 | 说明 | 认证 |
+|------|------|------|------|------|
+| **认证** | POST | `/api/auth/login` | 登录获取 Token | 否 |
+|  | POST | `/api/auth/logout` | 登出 | 是 |
+|  | GET | `/api/auth/check` | 检查登录状态 | 是 |
+| **大模型配置** | GET | `/api/model/list` | 获取列表 | 是 |
+|  | GET | `/api/model/{id}` | 获取详情 | 是 |
+|  | POST | `/api/model` | 创建 | 是 |
+|  | PUT | `/api/model` | 更新 | 是 |
+|  | DELETE | `/api/model/{id}` | 删除 | 是 |
+| **识别规则** | GET | `/api/rule/list` | 获取列表 | 是 |
+|  | GET | `/api/rule/{id}` | 获取详情 | 是 |
+|  | POST | `/api/rule` | 创建 | 是 |
+|  | PUT | `/api/rule` | 更新 | 是 |
+|  | DELETE | `/api/rule/{id}` | 删除 | 是 |
+| **视频流** | GET | `/api/stream/list` | 获取列表 | 是 |
+|  | GET | `/api/stream/{id}` | 获取详情 | 是 |
+|  | POST | `/api/stream` | 创建 | 是 |
+|  | PUT | `/api/stream` | 更新 | 是 |
+|  | DELETE | `/api/stream/{id}` | 删除 | 是 |
+| **绑定关系** | GET | `/api/stream-rule/list` | 获取列表 | 是 |
+|  | GET | `/api/stream-rule/{id}` | 获取详情 | 是 |
+|  | POST | `/api/stream-rule` | 创建 | 是 |
+|  | PUT | `/api/stream-rule` | 更新 | 是 |
+|  | DELETE | `/api/stream-rule/{id}` | 删除 | 是 |
+|  | GET | `/api/stream-rule/by-stream/{streamId}` | 获取某视频流的所有规则 | 是 |
+| **日志与统计** | GET | `/api/logs/{ruleId}` | 查询规则历史记录 | 是 |
+|  | GET | `/api/statistics/summary` | 获取统计摘要（饼图） | 是 |
+|  | GET | `/api/statistics/trend` | 获取趋势数据（折线图） | 是 |
+| **测试接口** | GET | `/api/test/capture/{streamId}` | 测试视频流捕获（ID） | 是 |
+|  | POST | `/api/test/capture-url` | 测试视频流捕获（URL） | 是 |
+|  | GET | `/api/test/detect/{streamId}/{ruleId}` | 测试 AI 识别 | 是 |
 ## 基础信息
 
 - **Base URL**: `http://localhost:8080`
 - **响应格式**: JSON
 - **字符编码**: UTF-8
+- **认证方式**: Bearer Token（除登录接口外，所有 `/api/**` 接口都需要认证）
 
 ## 通用响应格式
 
@@ -18,9 +52,92 @@
 }
 ```
 
-- `code`: 状态码，200 表示成功，500 表示失败
+- `code`: 状态码，200 表示成功，401 表示未授权，500 表示失败
 - `message`: 响应消息
 - `data`: 响应数据
+
+---
+
+## 0. 认证 API
+
+### 0.1 登录获取 Token
+
+**接口**: `POST /api/auth/login`
+
+**请求头**: `Content-Type: application/json`
+
+**请求体**:
+```json
+{
+  "password": "admin123"
+}
+```
+
+**成功返回示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "token": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+**失败返回示例**:
+```json
+{
+  "code": 401,
+  "message": "密码错误",
+  "data": null
+}
+```
+
+### 0.2 登出
+
+**接口**: `POST /api/auth/logout`
+
+**请求头**: `Authorization: Bearer {token}`
+
+**请求体**: 无
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null
+}
+```
+
+### 0.3 检查登录状态
+
+**接口**: `GET /api/auth/check`
+
+**请求头**: `Authorization: Bearer {token}`
+
+**返回示例**（成功）:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": null
+}
+```
+
+**返回示例**（失败 - 未登录或 Token 无效）:
+```json
+{
+  "code": 401,
+  "message": "认证信息无效或已过期",
+  "data": null
+}
+```
+
+**认证说明**:
+- 所有 `/api/**` 接口（除了 `/api/auth/login`）都需要在请求头中携带 `Authorization: Bearer {token}`
+- Token 在 `application.yml` 中配置过期时间，0 表示永不过期
+- 部署生产环境前务必修改默认密码
 
 ---
 
@@ -29,6 +146,8 @@
 ### 1.1 获取所有大模型配置
 
 **接口**: `GET /api/model/list`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **请求参数**: 无
 
@@ -56,6 +175,8 @@
 
 **接口**: `GET /api/model/{id}`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **路径参数**:
 - `id`: 大模型 ID
 
@@ -81,7 +202,9 @@
 
 **接口**: `POST /api/model`
 
-**请求头**: `Content-Type: application/json`
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 **请求体**:
 ```json
@@ -114,7 +237,9 @@
 
 **接口**: `PUT /api/model`
 
-**请求头**: `Content-Type: application/json`
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 **请求体**:
 ```json
@@ -141,6 +266,8 @@
 
 **接口**: `DELETE /api/model/{id}`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **路径参数**:
 - `id`: 大模型 ID
 
@@ -160,6 +287,8 @@
 ### 2.1 获取所有识别规则
 
 **接口**: `GET /api/rule/list`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **请求参数**: 无
 
@@ -187,6 +316,8 @@
 
 **接口**: `GET /api/rule/{id}`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **路径参数**:
 - `id`: 规则 ID
 
@@ -196,7 +327,9 @@
 
 **接口**: `POST /api/rule`
 
-**请求头**: `Content-Type: application/json`
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 **请求体**:
 ```json
@@ -229,11 +362,17 @@
 
 **接口**: `PUT /api/rule`
 
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
+
 **请求体**: 同 2.3，需包含 `id` 字段
 
 ### 2.5 删除识别规则
 
 **接口**: `DELETE /api/rule/{id}`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **路径参数**:
 - `id`: 规则 ID
@@ -245,6 +384,8 @@
 ### 3.1 获取所有视频流
 
 **接口**: `GET /api/stream/list`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **请求参数**: 无
 
@@ -271,6 +412,8 @@
 
 **接口**: `GET /api/stream/{id}`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **路径参数**:
 - `id`: 视频流 ID
 
@@ -280,7 +423,9 @@
 
 **接口**: `POST /api/stream`
 
-**请求头**: `Content-Type: application/json`
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 **请求体**:
 ```json
@@ -315,11 +460,17 @@
 
 **接口**: `PUT /api/stream`
 
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
+
 **请求体**: 同 3.3，需包含 `id` 字段
 
 ### 3.5 删除视频流
 
 **接口**: `DELETE /api/stream/{id}`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **路径参数**:
 - `id`: 视频流 ID
@@ -331,6 +482,8 @@
 ### 4.1 获取所有绑定关系
 
 **接口**: `GET /api/stream-rule/list`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **返回示例**:
 ```json
@@ -353,6 +506,8 @@
 
 **接口**: `GET /api/stream-rule/{id}`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **路径参数**:
 - `id`: 绑定关系 ID
 
@@ -360,7 +515,9 @@
 
 **接口**: `POST /api/stream-rule`
 
-**请求头**: `Content-Type: application/json`
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 **请求体**:
 ```json
@@ -391,11 +548,17 @@
 
 **接口**: `PUT /api/stream-rule`
 
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
+
 **请求体**: 同 4.3，需包含 `id` 字段
 
 ### 4.5 删除绑定关系
 
 **接口**: `DELETE /api/stream-rule/{id}`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **路径参数**:
 - `id`: 绑定关系 ID
@@ -403,6 +566,8 @@
 ### 4.6 获取指定视频流的所有规则
 
 **接口**: `GET /api/stream-rule/by-stream/{streamId}`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **路径参数**:
 - `streamId`: 视频流 ID
@@ -416,6 +581,8 @@
 ### 5.1 查询指定规则的历史执行记录
 
 **接口**: `GET /api/logs/{ruleId}`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **路径参数**:
 - `ruleId`: 规则 ID
@@ -473,6 +640,8 @@
 
 **接口**: `GET /api/statistics/summary`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **查询参数**:
 - `timeRange`: 时间范围，可选值 `24h`（24小时）或 `7d`（7天），默认 `24h`
 - `successType`: 成功类型，可选值 `execution`（执行成功）或 `ai_result`（AI识别成功），默认 `execution`
@@ -525,6 +694,8 @@ GET /api/statistics/summary?timeRange=24h&ruleId=1
 ### 6.2 获取趋势数据（折线图数据）
 
 **接口**: `GET /api/statistics/trend`
+
+**请求头**: `Authorization: Bearer {token}`
 
 **查询参数**: 同 6.1
 
@@ -590,30 +761,40 @@ GET /api/statistics/trend?timeRange=7d&successType=ai_result
 **场景1：监控系统整体运行状况**
 ```bash
 # 获取最近24小时的整体统计
-curl "http://localhost:8080/api/statistics/summary?timeRange=24h&successType=execution"
+curl "http://localhost:8080/api/statistics/summary?timeRange=24h&successType=execution" \
+  -H "Authorization: Bearer your-token"
 
 # 获取最近24小时的趋势
-curl "http://localhost:8080/api/statistics/trend?timeRange=24h&successType=execution"
+curl "http://localhost:8080/api/statistics/trend?timeRange=24h&successType=execution" \
+  -H "Authorization: Bearer your-token"
 ```
 
 **场景2：分析特定视频流的识别效果**
 ```bash
 # 统计视频流ID为1的最近7天AI识别成功率
-curl "http://localhost:8080/api/statistics/summary?timeRange=7d&successType=ai_result&videoStreamId=1"
+curl "http://localhost:8080/api/statistics/summary?timeRange=7d&successType=ai_result&videoStreamId=1" \
+  -H "Authorization: Bearer your-token"
 ```
 
 **场景3：评估某个规则的表现**
 ```bash
 # 统计规则ID为2的最近24小时表现
-curl "http://localhost:8080/api/statistics/summary?timeRange=24h&ruleId=2"
-curl "http://localhost:8080/api/statistics/trend?timeRange=24h&ruleId=2"
+curl "http://localhost:8080/api/statistics/summary?timeRange=24h&ruleId=2" \
+  -H "Authorization: Bearer your-token"
+curl "http://localhost:8080/api/statistics/trend?timeRange=24h&ruleId=2" \
+  -H "Authorization: Bearer your-token"
 ```
 
 **前端集成示例（Vue + ECharts）**:
 ```javascript
 // 获取饼图数据
 async function loadPieChart() {
-  const response = await fetch('/api/statistics/summary?timeRange=24h&successType=execution');
+  const token = localStorage.getItem('token');
+  const response = await fetch('/api/statistics/summary?timeRange=24h&successType=execution', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
   const result = await response.json();
   const { successCount, failureCount } = result.data;
 
@@ -632,7 +813,12 @@ async function loadPieChart() {
 
 // 获取折线图数据
 async function loadLineChart() {
-  const response = await fetch('/api/statistics/trend?timeRange=24h&successType=execution');
+  const token = localStorage.getItem('token');
+  const response = await fetch('/api/statistics/trend?timeRange=24h&successType=execution', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
   const result = await response.json();
   const { labels, totalCounts, successCounts, failureCounts } = result.data;
 
@@ -658,6 +844,8 @@ async function loadLineChart() {
 
 **接口**: `GET /api/test/capture/{streamId}`
 
+**请求头**: `Authorization: Bearer {token}`
+
 **路径参数**:
 - `streamId`: 视频流 ID
 
@@ -676,11 +864,34 @@ async function loadLineChart() {
 }
 ```
 
-### 7.2 测试视频流捕获（通过 URL）
+### 7.2 测试 AI 识别（通过 ID）
+
+**接口**: `GET /api/test/detect/{streamId}/{ruleId}`
+
+**请求头**: `Authorization: Bearer {token}`
+
+**路径参数**:
+- `streamId`: 视频流 ID
+- `ruleId`: 规则 ID
+
+**返回示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": "{\"has_fall\": false, \"confidence\": 95, \"description\": \"未检测到摔倒\"}"
+}
+```
+
+**说明**: 此接口用于测试指定视频流和规则的完整识别流程，返回 AI 的原始 JSON 结果
+
+### 7.3 测试视频流捕获（通过 URL）
 
 **接口**: `POST /api/test/capture-url`
 
-**请求头**: `Content-Type: application/json`
+**请求头**: 
+- `Content-Type: application/json`
+- `Authorization: Bearer {token}`
 
 **请求体**:
 ```json
@@ -699,31 +910,36 @@ async function loadLineChart() {
 
 ### 8.1 完整配置流程
 
-1. **创建大模型 API 配置**
+1. **登录获取 Token**
+   ```
+   POST /api/auth/login
+   ```
+
+2. **创建大模型 API 配置**
    ```
    POST /api/model
    ```
 
-2. **创建识别规则**
+3. **创建识别规则**
    ```
    POST /api/rule
    ```
 
-3. **创建视频流**
+4. **创建视频流**
    ```
    POST /api/stream
    ```
 
-4. **绑定规则到视频流**
+5. **绑定规则到视频流**
    ```
    POST /api/stream-rule
    ```
 
-5. **系统自动开始识别**
+6. **系统自动开始识别**
    - 系统会根据视频流的 `intervalSeconds` 定期执行识别
    - 识别结果会自动保存到数据库
 
-6. **查询识别日志和统计**
+7. **查询识别日志和统计**
    ```
    GET /api/logs/{ruleId}
    GET /api/statistics/summary
@@ -783,6 +999,7 @@ async function loadLineChart() {
 
 ### 9.2 常见错误
 
+- **401 未授权**: 未提供 Token 或 Token 无效/过期
 - **数据库连接失败**: 检查 application.yml 中的数据库配置
 - **视频流无法访问**: 检查视频流 URL 是否正确，网络是否可达
 - **大模型 API 调用失败**: 检查 API Key 是否正确，余额是否充足
@@ -792,28 +1009,25 @@ async function loadLineChart() {
 
 ## 10. 注意事项
 
-1. **视频流 URL 格式**:
+1. **认证要求**: 除登录接口外，所有 API 都需要在请求头中携带有效的 Bearer Token
+2. **视频流 URL 格式**:
    - RTSP 流: `rtsp://192.168.1.100:554/stream1`
    - HTTP 图片: `http://192.168.1.100:5000/image.jpg`
    - HTTP-FLV: `http://192.168.1.100:8080/live/stream.flv`
    - HLS (M3U8): `http://192.168.1.100:8080/live/stream.m3u8`
-
-2. **识别间隔设置**:
+3. **识别间隔设置**:
    - 建议根据实际需求设置，避免过于频繁
    - 一般设置 3-10 秒即可
    - 过短会增加服务器压力和 API 调用成本
-
-3. **大模型选择**:
+4. **大模型选择**:
    - OpenAI GPT-4o: 识别准确度高，成本较高
    - OpenAI GPT-4o-mini: 性价比高，适合一般场景
    - DeepSeek: 成本低，中文支持好
-
-4. **日志管理**:
+5. **日志管理**:
    - 日志永久保存在数据库中
    - 可通过统计接口监控系统运行状态
    - 建议定期备份数据库
-
-5. **系统提示词优化**:
+6. **系统提示词优化**:
    - 明确告知输出格式（JSON）
    - 强调关注重点（人物、行为、场景等）
    - 避免多余解释，只返回结果
@@ -825,10 +1039,18 @@ async function loadLineChart() {
 
 ### 示例：配置一个老人摔倒检测系统
 
-**步骤 1: 创建大模型配置**
+**步骤 1: 登录获取 Token**
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"password":"admin123"}'
+```
+
+**步骤 2: 创建大模型配置**
 ```bash
 curl -X POST http://localhost:8080/api/model \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token" \
   -d '{
     "name": "OpenAI",
     "baseUrl": "https://api.openai.com/v1",
@@ -838,10 +1060,11 @@ curl -X POST http://localhost:8080/api/model \
   }'
 ```
 
-**步骤 2: 创建识别规则**
+**步骤 3: 创建识别规则**
 ```bash
 curl -X POST http://localhost:8080/api/rule \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token" \
   -d '{
     "modelApiId": 1,
     "name": "老人摔倒检测",
@@ -851,10 +1074,11 @@ curl -X POST http://localhost:8080/api/rule \
   }'
 ```
 
-**步骤 3: 创建视频流**
+**步骤 4: 创建视频流**
 ```bash
 curl -X POST http://localhost:8080/api/stream \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token" \
   -d '{
     "name": "养老院房间1",
     "streamUrl": "rtsp://192.168.1.100:554/stream1",
@@ -863,10 +1087,11 @@ curl -X POST http://localhost:8080/api/stream \
   }'
 ```
 
-**步骤 4: 绑定规则**
+**步骤 5: 绑定规则**
 ```bash
 curl -X POST http://localhost:8080/api/stream-rule \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-token" \
   -d '{
     "videoStreamId": 1,
     "aiRuleId": 1,
@@ -874,13 +1099,22 @@ curl -X POST http://localhost:8080/api/stream-rule \
   }'
 ```
 
-**步骤 5: 查询日志**
+**步骤 6: 查询日志**
 ```bash
 # 查询规则的最近 10 条历史记录
-curl http://localhost:8080/api/logs/1?limit=10
+curl "http://localhost:8080/api/logs/1?limit=10" \
+  -H "Authorization: Bearer your-token"
 
 # 获取最新的执行结果
-curl http://localhost:8080/api/logs/1?limit=1
+curl "http://localhost:8080/api/logs/1?limit=1" \
+  -H "Authorization: Bearer your-token"
+```
+
+**步骤 7: 测试识别**
+```bash
+# 测试完整的识别流程
+curl "http://localhost:8080/api/test/detect/1/1" \
+  -H "Authorization: Bearer your-token"
 ```
 
 ---
@@ -977,9 +1211,12 @@ CREATE TABLE detection_log (
 
 ---
 
-**文档版本**: 2.0
-**最后更新**: 2025-12-17
+**文档版本**: 3.0
+**最后更新**: 2025-12-19
 **更新内容**:
-- 添加统计接口（饼图和折线图）
-- 检测日志改为数据库存储
-- 新增 detection_log 表
+- 添加完整的认证 API 文档
+- 新增测试接口 `/api/test/detect/{streamId}/{ruleId}`
+- 所有 API 接口添加认证要求说明
+- 更新检测日志字段描述
+- 完善统计接口参数说明
+- 更新完整使用示例，包含认证步骤

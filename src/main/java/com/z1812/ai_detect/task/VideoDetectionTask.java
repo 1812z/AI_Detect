@@ -50,7 +50,7 @@ public class VideoDetectionTask {
                 Long lastTime = lastExecutionTime.get(stream.getId());
 
                 if (lastTime != null &&
-                    (currentTime - lastTime) < stream.getIntervalSeconds() * 1000L) {
+                        (currentTime - lastTime) < stream.getIntervalSeconds() * 1000L) {
                     log.debug("视频流 [{}] 未到识别间隔时间，跳过", stream.getName());
                     continue;
                 }
@@ -87,7 +87,7 @@ public class VideoDetectionTask {
                         log.info("检测完成 - 视频流: [{}], 规则: [{}], 耗时: {}ms, 结果: {}",
                                 stream.getName(), rule.getName(), duration, result);
 
-                        // 尝试从 AI 结果中提取 success 字段
+                        // 提取success字段
                         Integer aiSuccess = extractSuccessFromResult(result);
 
                         detectionLogService.addLog(
@@ -124,10 +124,7 @@ public class VideoDetectionTask {
         }
     }
 
-    /**
-     * 从 AI 结果中提取 success 字段
-     * 尝试解析 JSON 并提取 success 字段，支持布尔值和数字
-     */
+    //提取success字段
     private Integer extractSuccessFromResult(String result) {
         if (result == null || result.trim().isEmpty()) {
             return null;

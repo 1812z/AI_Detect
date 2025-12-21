@@ -28,9 +28,7 @@ public class ImageCapture {
                 .build();
     }
 
-    /**
-     * 从 HTTP URL 下载图片
-     */
+    //从 HTTP URL 下载图片
     public byte[] captureFromHttp(String imageUrl) throws IOException {
         log.info("开始从 HTTP URL 下载图片: {}", imageUrl);
 

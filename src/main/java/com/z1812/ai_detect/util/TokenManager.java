@@ -12,18 +12,15 @@ public class TokenManager {
 
     private final Map<String, LocalDateTime> tokenStore = new ConcurrentHashMap<>();
 
-    /**
-     * 生成token
-     */
+    // 生成token
     public String generateToken() {
         String token = UUID.randomUUID().toString();
         tokenStore.put(token, LocalDateTime.now());
         return token;
     }
 
-    /**
-     * 验证token是否有效
-     */
+
+    // 验证token是否有效
     public boolean validateToken(String token, int expireMinutes) {
         if (token == null || !tokenStore.containsKey(token)) {
             return false;
@@ -39,26 +36,10 @@ public class TokenManager {
         return createTime.plusMinutes(expireMinutes).isAfter(now);
     }
 
-    /**
-     * 删除token（登出）
-     */
+    // 删除Token（登出）
     public void removeToken(String token) {
         if (token != null) {
             tokenStore.remove(token);
         }
-    }
-
-    /**
-     * 清理过期的token
-     */
-    public void cleanExpiredTokens(int expireMinutes) {
-        if (expireMinutes == 0) {
-            return;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        tokenStore.entrySet().removeIf(entry ->
-            entry.getValue().plusMinutes(expireMinutes).isBefore(now)
-        );
     }
 }
